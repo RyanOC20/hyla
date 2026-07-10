@@ -8,6 +8,7 @@ use std::sync::Arc;
 use eframe::egui;
 
 use crate::library;
+use crate::media_keys::{MediaCommand, MediaControls};
 use crate::player::Player;
 use crate::track::Track;
 
@@ -60,6 +61,14 @@ pub struct HylaApp {
     volume: f32,
     /// Guards against issuing repeated auto-advances for a single track end.
     advance_issued: bool,
+    /// System media keys (F8) and Now Playing integration.
+    media: MediaControls,
+    /// Last Now Playing snapshot pushed: (track, paused, duration rounded to
+    /// seconds). Re-pushed whenever any component changes so the OS stays in
+    /// sync, including when the decoder fills in a track's duration a frame late.
+    media_state: Option<(Option<usize>, bool, u32)>,
+    /// Forces a Now Playing refresh next frame (e.g. after a seek).
+    media_dirty: bool,
 }
 
 impl HylaApp {
@@ -70,6 +79,9 @@ impl HylaApp {
             current: None,
             volume: 1.0,
             advance_issued: false,
+            media: MediaControls::new(),
+            media_state: None,
+            media_dirty: false,
         }
     }
 
@@ -108,13 +120,24 @@ impl eframe::App for HylaApp {
         ui.ctx().request_repaint();
 
         // Cmd+Ctrl+F toggles fullscreen, matching the macOS convention.
-        let toggle_fullscreen = ui.input(|i| {
-            i.key_pressed(egui::Key::F) && i.modifiers.mac_cmd && i.modifiers.ctrl
-        });
+        let toggle_fullscreen =
+            ui.input(|i| i.key_pressed(egui::Key::F) && i.modifiers.mac_cmd && i.modifiers.ctrl);
         if toggle_fullscreen {
             let fullscreen = ui.input(|i| i.viewport().fullscreen.unwrap_or(false));
             ui.ctx()
                 .send_viewport_cmd(egui::ViewportCommand::Fullscreen(!fullscreen));
+        }
+
+        // Apply any play/pause intents from the system media keys (F8).
+        for command in self.media.poll() {
+            if let Some(player) = self.player.as_ref() {
+                match command {
+                    MediaCommand::Play => player.set_paused(false),
+                    MediaCommand::Pause => player.set_paused(true),
+                    MediaCommand::Toggle => player.toggle_pause(),
+                }
+                self.media_dirty = true;
+            }
         }
 
         // Auto-advance to the next track when the current one finishes.
@@ -142,10 +165,37 @@ impl eframe::App for HylaApp {
         egui::CentralPanel::default()
             .frame(central_frame)
             .show(ui, |ui| self.track_list(ui));
+
+        self.sync_now_playing();
     }
 }
 
 impl HylaApp {
+    /// Push the current track to the system Now Playing center when it changes.
+    /// The OS extrapolates elapsed time from the playback rate between pushes, so
+    /// this only fires on a discontinuity: track change, pause/resume, seek, or
+    /// the decoder reporting a newly loaded track's duration.
+    fn sync_now_playing(&mut self) {
+        let Some(player) = self.player.as_ref() else {
+            return;
+        };
+        let paused = player.is_paused();
+        let duration = player.duration_secs();
+        let state = (self.current, paused, duration.max(0.0) as u32);
+        if !self.media_dirty && self.media_state == Some(state) {
+            return;
+        }
+        let title = self
+            .current
+            .and_then(|i| self.library.get(i))
+            .map(|t| t.file_name.as_str())
+            .unwrap_or("");
+        self.media
+            .update_now_playing(title, duration, player.position_secs(), !paused);
+        self.media_state = Some(state);
+        self.media_dirty = false;
+    }
+
     /// Now-playing line, progress bar, times, and controls.
     fn transport(&mut self, ui: &mut egui::Ui) {
         let now_playing = self
@@ -171,6 +221,7 @@ impl HylaApp {
         {
             let t = ((pointer.x - bar.rect.left()) / bar.rect.width()).clamp(0.0, 1.0);
             p.seek((t * dur) as f64);
+            self.media_dirty = true;
         }
 
         ui.add_space(4.0);

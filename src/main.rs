@@ -2,6 +2,7 @@ mod app;
 mod audio;
 mod command;
 mod library;
+mod media_keys;
 mod player;
 mod track;
 

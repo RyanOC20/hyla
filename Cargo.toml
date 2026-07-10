@@ -27,6 +27,13 @@ rfd = "0.17"
 crossbeam-channel = "0.5"
 anyhow = "1.0"
 
+# macOS media-key / Now Playing integration (MPRemoteCommandCenter). See media_keys.rs.
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = "0.6.4"
+objc2-foundation = "0.3.2"
+objc2-media-player = "0.3.2"
+block2 = "0.6.2"
+
 # Release is the only supported build for real-time audio (see CLAUDE.md).
 [profile.release]
 opt-level = 3
