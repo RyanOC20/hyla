@@ -1,6 +1,7 @@
-//! The egui UI thread. Austere by design: a filename list, one progress bar, a
-//! play/pause control, and a volume slider. The progress bar is the only
-//! animated element (CLAUDE.md).
+//! The egui UI thread. Austere by design: a filename list fills the window and
+//! a bottom transport carries the now-playing line, one progress bar, a
+//! play/pause control, a volume slider, and the folder picker. The progress bar
+//! is the only animated element (CLAUDE.md).
 
 use std::sync::Arc;
 
@@ -35,7 +36,7 @@ pub fn configure(ctx: &egui::Context) {
     // Restrained dark theme: near-black background, one muted accent for the
     // progress fill and selection. Minimal chrome.
     let mut visuals = egui::Visuals::dark();
-    let accent = egui::Color32::from_rgb(120, 160, 200);
+    let accent = egui::Color32::from_rgb(0x44, 0x73, 0x25);
     visuals.panel_fill = egui::Color32::from_gray(14);
     visuals.extreme_bg_color = egui::Color32::from_gray(30);
     visuals.selection.bg_fill = accent;
@@ -119,28 +120,18 @@ impl eframe::App for HylaApp {
             self.play_index(index);
         }
 
-        ui.add_space(8.0);
-        ui.horizontal(|ui| {
-            ui.heading("hyla");
-            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                if ui.button("open folder").clicked()
-                    && let Some(dir) = rfd::FileDialog::new().pick_folder()
-                {
-                    self.library = library::scan_dir(&dir);
-                    self.current = None;
-                }
-            });
-        });
-        ui.add_space(8.0);
-        ui.separator();
-        ui.add_space(8.0);
+        // Transport pinned to the bottom, the track list filling the rest.
+        // Both panels carry side margins so content clears the window borders.
+        let margin = egui::Margin::symmetric(16, 12);
+        let bottom_frame = egui::Frame::central_panel(ui.style()).inner_margin(margin);
+        egui::Panel::bottom("transport")
+            .frame(bottom_frame)
+            .show(ui, |ui| self.transport(ui));
 
-        self.transport(ui);
-        ui.add_space(12.0);
-        ui.separator();
-        ui.add_space(8.0);
-
-        self.track_list(ui);
+        let central_frame = egui::Frame::central_panel(ui.style()).inner_margin(margin);
+        egui::CentralPanel::default()
+            .frame(central_frame)
+            .show(ui, |ui| self.track_list(ui));
     }
 }
 
@@ -201,6 +192,15 @@ impl HylaApp {
             {
                 p.set_volume(self.volume);
             }
+
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                if ui.button("open folder").clicked()
+                    && let Some(dir) = rfd::FileDialog::new().pick_folder()
+                {
+                    self.library = library::scan_dir(&dir);
+                    self.current = None;
+                }
+            });
         });
     }
 
