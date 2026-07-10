@@ -13,10 +13,17 @@ use eframe::egui;
 use app::HylaApp;
 use track::Track;
 
+/// The default library folder scanned at startup when no path is given on the
+/// command line: `~/Music/hyla-library/`.
+fn default_library_dir() -> Option<PathBuf> {
+    std::env::var_os("HOME").map(|home| PathBuf::from(home).join("Music/hyla-library"))
+}
+
 fn main() -> eframe::Result<()> {
     // An optional path on the command line seeds the library: a folder is
-    // scanned; a file loads its containing folder. Without one, use the
-    // "open folder" button in the UI.
+    // scanned; a file loads its containing folder. Without one, fall back to the
+    // default library at ~/Music/hyla-library/; if that is missing, start empty
+    // and let the user pick a folder in the UI.
     let library = match std::env::args().nth(1).map(PathBuf::from) {
         Some(path) if path.is_dir() => library::scan_dir(&path),
         Some(path) if path.is_file() => {
@@ -27,15 +34,26 @@ fn main() -> eframe::Result<()> {
             }
             tracks
         }
-        _ => Vec::new(),
+        _ => match default_library_dir() {
+            Some(dir) if dir.is_dir() => library::scan_dir(&dir),
+            _ => Vec::new(),
+        },
     };
 
     let options = eframe::NativeOptions {
-        viewport: egui::ViewportBuilder::default().with_inner_size([420.0, 560.0]),
+        viewport: egui::ViewportBuilder::default()
+            .with_inner_size([420.0, 560.0])
+            .with_title("Hyla")
+            // Blend the titlebar into the app: make it transparent, hide the
+            // title text, and let the content extend up behind it. The traffic
+            // light buttons stay put so the window is still controllable.
+            .with_titlebar_shown(false)
+            .with_title_shown(false)
+            .with_fullsize_content_view(true),
         ..Default::default()
     };
     eframe::run_native(
-        "hyla",
+        "Hyla",
         options,
         Box::new(move |cc| {
             app::configure(&cc.egui_ctx);

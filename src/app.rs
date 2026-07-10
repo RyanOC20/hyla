@@ -161,7 +161,10 @@ impl eframe::App for HylaApp {
             .frame(bottom_frame)
             .show(ui, |ui| self.transport(ui));
 
-        let central_frame = egui::Frame::central_panel(ui.style()).inner_margin(margin);
+        // With the titlebar hidden and content extending behind it, add extra
+        // top padding so the track list clears the floating traffic lights.
+        let central_margin = egui::Margin { top: 32, ..margin };
+        let central_frame = egui::Frame::central_panel(ui.style()).inner_margin(central_margin);
         egui::CentralPanel::default()
             .frame(central_frame)
             .show(ui, |ui| self.track_list(ui));
