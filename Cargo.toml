@@ -1,0 +1,28 @@
+[package]
+name = "hyla"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+# Audio output — talks to CoreAudio.
+cpal = "0.18"
+# Pure-Rust decode (FLAC, MP3, WAV, AAC/ALAC, OGG) + duration.
+symphonia = { version = "0.6", features = ["all"] }
+# High-quality sample-rate conversion, used only for off-rate files.
+rubato = "4.0"
+# Lock-free SPSC ring buffer between decode thread and audio callback.
+rtrb = "0.3"
+# Immediate-mode UI.
+eframe = "0.35"
+egui = "0.35"
+# Native macOS folder picker.
+rfd = "0.17"
+# Command channel: UI -> decode thread.
+crossbeam-channel = "0.5"
+anyhow = "1.0"
+
+# Release is the only supported build for real-time audio (see CLAUDE.md).
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
