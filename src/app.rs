@@ -107,6 +107,16 @@ impl eframe::App for HylaApp {
         // Repaint continuously so the progress bar animates smoothly.
         ui.ctx().request_repaint();
 
+        // Cmd+Ctrl+F toggles fullscreen, matching the macOS convention.
+        let toggle_fullscreen = ui.input(|i| {
+            i.key_pressed(egui::Key::F) && i.modifiers.mac_cmd && i.modifiers.ctrl
+        });
+        if toggle_fullscreen {
+            let fullscreen = ui.input(|i| i.viewport().fullscreen.unwrap_or(false));
+            ui.ctx()
+                .send_viewport_cmd(egui::ViewportCommand::Fullscreen(!fullscreen));
+        }
+
         // Auto-advance to the next track when the current one finishes.
         let mut advance_to = None;
         if let (Some(player), Some(index)) = (self.player.as_ref(), self.current) {
@@ -167,7 +177,7 @@ impl HylaApp {
         ui.horizontal(|ui| {
             ui.label(fmt_time(pos));
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                ui.label(fmt_time(dur));
+                ui.label(fmt_remaining(pos, dur));
             });
         });
 
@@ -248,5 +258,18 @@ fn fmt_time(secs: f32) -> String {
         return "--:--".into();
     }
     let total = secs as u64;
-    format!("{:02}:{:02}", total / 60, total % 60)
+    let (h, m, s) = (total / 3600, (total % 3600) / 60, total % 60);
+    if h > 0 {
+        format!("{h}:{m:02}:{s:02}")
+    } else {
+        format!("{m:02}:{s:02}")
+    }
+}
+
+/// Time left in the track, shown with a leading `-`.
+fn fmt_remaining(pos: f32, dur: f32) -> String {
+    if !pos.is_finite() || !dur.is_finite() || dur <= 0.0 {
+        return "--:--".into();
+    }
+    format!("-{}", fmt_time((dur - pos).max(0.0)))
 }
