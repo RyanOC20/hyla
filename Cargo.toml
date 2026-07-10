@@ -3,6 +3,12 @@ name = "hyla"
 version = "0.1.0"
 edition = "2024"
 
+[package.metadata.bundle]
+name = "Hyla"
+identifier = "com.github.RyanOC20.hyla"
+icon = ["assets/AppIcon.icns"]
+version = "0.1.0"
+
 [dependencies]
 # Audio output — talks to CoreAudio.
 cpal = "0.18"
