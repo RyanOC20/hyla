@@ -17,7 +17,7 @@ streaming, no cross-platform support.
 
 | Concern | Crate |
 | --- | --- |
-| UI | egui / eframe (immediate mode, monospaced) |
+| UI | egui / eframe |
 | Audio output | cpal (CoreAudio) |
 | Decoding | Symphonia (FLAC, MP3, WAV, AAC/ALAC, OGG) |
 | Resampling | rubato (only when a file's rate differs from the device) |
