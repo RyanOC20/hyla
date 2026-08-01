@@ -32,6 +32,8 @@ anyhow = "1.0"
 objc2 = "0.6.4"
 objc2-foundation = "0.3.2"
 objc2-media-player = "0.3.2"
+# NSImage, to hand the app icon to Control Center as Now Playing artwork.
+objc2-app-kit = "0.3.2"
 block2 = "0.6.2"
 
 # Release is the only supported build for real-time audio (see CLAUDE.md).

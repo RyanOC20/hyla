@@ -8,7 +8,7 @@ use std::sync::Arc;
 use eframe::egui;
 
 use crate::library;
-use crate::media_keys::{MediaCommand, MediaControls};
+use crate::media_keys::MediaControls;
 use crate::player::Player;
 use crate::track::Track;
 
@@ -96,6 +96,9 @@ impl HylaApp {
             None => match Player::new(track.path.clone()) {
                 Ok(player) => {
                     player.set_volume(self.volume);
+                    // Hand the live playback state to the media-key handlers so
+                    // F8 and Control Center can pause/resume even while hidden.
+                    self.media.attach(player.shared.clone());
                     self.player = Some(player);
                 }
                 Err(e) => {
@@ -128,17 +131,10 @@ impl eframe::App for HylaApp {
                 .send_viewport_cmd(egui::ViewportCommand::Fullscreen(!fullscreen));
         }
 
-        // Apply any play/pause intents from the system media keys (F8).
-        for command in self.media.poll() {
-            if let Some(player) = self.player.as_ref() {
-                match command {
-                    MediaCommand::Play => player.set_paused(false),
-                    MediaCommand::Pause => player.set_paused(true),
-                    MediaCommand::Toggle => player.toggle_pause(),
-                }
-                self.media_dirty = true;
-            }
-        }
+        // Media keys (F8) and Control Center act on the shared playback state
+        // directly, in the system command handlers, so they work even while the
+        // window is hidden and this frame is not running. When it is running,
+        // the pause button below and `sync_now_playing` reflect their effect.
 
         // Auto-advance to the next track when the current one finishes.
         let mut advance_to = None;

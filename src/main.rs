@@ -40,10 +40,17 @@ fn main() -> eframe::Result<()> {
         },
     };
 
+    // Embed the app icon and hand it to the viewport. Without this, eframe sets
+    // its built-in egui logo as the macOS Dock icon at runtime, overriding the
+    // bundle's AppIcon.icns while the app runs.
+    let icon = eframe::icon_data::from_png_bytes(include_bytes!("../assets/icon.png"))
+        .expect("bundled icon.png is a valid PNG");
+
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
             .with_inner_size([420.0, 560.0])
             .with_title("Hyla")
+            .with_icon(icon)
             // Blend the titlebar into the app: make it transparent, hide the
             // title text, and let the content extend up behind it. The traffic
             // light buttons stay put so the window is still controllable.
