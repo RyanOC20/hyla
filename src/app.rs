@@ -271,14 +271,17 @@ impl HylaApp {
             return;
         }
         let mut clicked = None;
-        egui::ScrollArea::vertical().show(ui, |ui| {
-            for (index, track) in self.library.iter().enumerate() {
-                let selected = self.current == Some(index);
-                if ui.selectable_label(selected, &track.file_name).clicked() {
-                    clicked = Some(index);
+        // Scrolling stays enabled (wheel, trackpad, drag); only the bar is hidden.
+        egui::ScrollArea::vertical()
+            .scroll_bar_visibility(egui::scroll_area::ScrollBarVisibility::AlwaysHidden)
+            .show(ui, |ui| {
+                for (index, track) in self.library.iter().enumerate() {
+                    let selected = self.current == Some(index);
+                    if ui.selectable_label(selected, &track.file_name).clicked() {
+                        clicked = Some(index);
+                    }
                 }
-            }
-        });
+            });
         if let Some(index) = clicked {
             self.play_index(index);
         }
